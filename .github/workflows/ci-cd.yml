@@ -1,0 +1,41 @@
+
+name: Docker CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required files
+        run: |
+          test -f index.html
+          test -f Dockerfile
+          test -f docker-compose.yml
+
+      - name: Build Docker image
+        run: docker build -t agile-demo-app .
+
+      - name: Test Docker image
+        run: |
+          docker run -d --name agile-test -p 8080:80 agile-demo-app
+          sleep 3
+          curl --fail http://localhost:8080
+          docker stop agile-test
+          docker rm agile-test
+
+      - name: Deploy with Docker Compose
+        run: docker compose up -d --build
+
+      - name: Verify deployment
+        run: |
+          sleep 3
+          curl --fail http://localhost:8080
+          docker compose down
